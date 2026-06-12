@@ -70,7 +70,7 @@ PREMIUM_PACKAGES = {
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-fragment = FragmentAPIClient()
+
 
 class OrderState(StatesGroup):
     waiting_for_username = State()

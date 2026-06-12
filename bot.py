@@ -297,52 +297,33 @@ async def process_not_photo(message: Message):
 # ===== ADMIN CALLBACK ACTIONS =====
 @dp.callback_query(F.data.startswith("approve_"))
 async def admin_approve(callback: CallbackQuery):
+    # fragment အလုပ်လုပ်မလုပ် စစ်ဆေးခြင်း
+    if fragment is None:
+        await callback.answer("Error: Fragment API မရှိပါ။", show_alert=True)
+        return
+
     parts = callback.data.split("_")
     order_type, key, username, user_id = parts[1], parts[2], parts[3], parts[4]
     
-    await callback.message.edit_caption(caption=callback.message.caption + "\n\n⏳ **Fragment သို့ ချိတ်ဆက်နေပါသည်...**", parse_mode="Markdown")
-    await bot.send_message(int(user_id), "⏳ **သင့်အော်ဒါကို ငွေလွှဲမှန်ကန်ကြောင်း အတည်ပြုပြီးပါပြီ။ Fragment မှတစ်ဆင့် ပစ္စည်းလွှဲပြောင်းပေးနေပါသည်။**")
-
-    if order_type == "stars":
-        pkg = STAR_PACKAGES[key]
-        result = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: fragment.buy_stars(
-                username=username,
-                amount=pkg["stars"],
-                seed=TON_SEED,
-                fragment_cookies=FRAGMENT_COOKIES
-            )
-        )
-        if result:
-            await callback.message.edit_caption(caption=callback.message.caption + "\n\n✅ **အောင်မြင်စွာ ပို့ဆောင်ပြီးပါပြီ!**", parse_mode="Markdown")
-            await bot.send_message(int(user_id), f"✅ **အောင်မြင်ပါသည်!**\n\n⭐ {pkg['stars']} Stars ကို @{username} ထံသို့ အောင်မြင်စွာ ပို့ဆောင်ပြီးပါပြီ။ 🎉")
+    await callback.message.edit_caption(caption=callback.message.caption + "\n\n⏳ **Fragment သို့ ချိတ်ဆက်နေပါသည်...**")
+    
+    try:
+        if order_type == "stars":
+            pkg = STAR_PACKAGES[key]
+            # fragment ကို သုံးပြီး လွှဲခြင်း
+            result = await asyncio.to_thread(fragment.buy_stars, username, pkg["stars"], TON_SEED, FRAGMENT_COOKIES)
         else:
-            await callback.message.edit_caption(caption=callback.message.caption + "\n\n❌ **Fragment Error ဖြစ်သွားပါသည်။**", parse_mode="Markdown")
-            await bot.send_message(int(user_id), f"❌ စနစ်အတွင်း ချို့ယွင်းချက်ရှိ၍ ပစ္စည်းမရောက်ပါက support သို့ ဆက်သွယ်ပါ - @{SUPPORT_USERNAME}")
+            pkg = PREMIUM_PACKAGES[key]
+            # fragment ကို သုံးပြီး လွှဲခြင်း
+            result = await asyncio.to_thread(fragment.buy_premium, username, pkg["months"], TON_SEED, FRAGMENT_COOKIES)
 
-    elif order_type == "premium":
-        pkg = PREMIUM_PACKAGES[key]
-        result = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: fragment.buy_premium(
-                username=username,
-                duration=pkg["months"],
-                seed=TON_SEED,
-                fragment_cookies=FRAGMENT_COOKIES
-            )
-        )
         if result:
-            await callback.message.edit_caption(caption=callback.message.caption + "\n\n✅ **Premium အောင်မြင်စွာ ပို့ပြီးပါပြီ!**", parse_mode="Markdown")
-            await bot.send_message(int(user_id), f"✅ **အောင်မြင်ပါသည်!**\n\n👑 Telegram Premium {pkg['months']} လစာကို @{username} ထံသို့ အောင်မြင်စွာ Gift ပေးပြီးပါပြီ။ 🎉")
+            await callback.message.edit_caption(caption=callback.message.caption + "\n\n✅ **အောင်မြင်စွာ ပို့ဆောင်ပြီးပါပြီ!**")
+            await bot.send_message(int(user_id), f"✅ အောင်မြင်ပါသည်! @{username} ထံသို့ ပို့ဆောင်ပြီးပါပြီ။")
         else:
-            await callback.message.edit_caption(caption=callback.message.caption + "\n\n❌ **Fragment Error ဖြစ်သွားပါသည်။**", parse_mode="Markdown")
-            await bot.send_message(int(user_id), f"❌ Premium တင်ရာတွင် ချို့ယွင်းချက်ရှိပါသဖြင့် support သို့ ဆက်သွယ်ပါ - @{SUPPORT_USERNAME}")
-
-@dp.callback_query(F.data.startswith("reject_"))
-async def admin_reject(callback: CallbackQuery):
-    user_id = callback.data.split("_")[1]
-    await callback.message.edit_caption(caption=callback.message.caption + "\n\n❌ **ဒီအော်ဒါကို ငြင်းပယ်လိုက်သည်။**", parse_mode="Markdown")
-    await bot.send_message(int(user_id), f"❌ **သင့်အော်ဒါ ငြင်းပယ်ခံရပါသည်။**\n\nငွေလွှဲမှု မှားယွင်းခြင်း သို့မဟုတ် ဘောင်ချာအဟောင်းဖြစ်နိုင်ပါသည်။ အသေးစိတ်ကို support သို့ မေးမြန်းနိုင်ပါသည် - @{SUPPORT_USERNAME}")
-
+            await callback.message.edit_caption(caption=callback.message.caption + "\n\n❌ **Fragment ပို့ဆောင်မှု မအောင်မြင်ပါ။**")
+    except Exception as e:
+        await callback.message.edit_caption(caption=callback.message.caption + f"\n\n❌ **Error:** {str(e)}")
 # ==================== ADMIN COMMANDS (.star နှင့် .ton) ====================
 
 def is_admin(user_id: int) -> bool:

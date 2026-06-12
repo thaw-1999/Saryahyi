@@ -8,6 +8,12 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
+try:
+    from fragment_api_lib.client import FragmentAPIClient
+    fragment = FragmentAPIClient()
+except ImportError:
+    logging.warning("fragment_api_lib ကို ရှာမတွေ့ပါ။")
+    fragment = None
 
 # ==================== .env ဖိုင်ကို ဖတ်ရန် နေရာ ====================
 try:
